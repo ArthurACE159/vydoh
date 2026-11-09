@@ -1,5 +1,19 @@
-const CACHE='vydoh-v2-9-static';
+const CACHE='vydoh-v3-0-static';
 const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)))});
+self.addEventListener('message',event=>{if(event.data&&event.data.type==='SKIP_WAITING')self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{for(const key of await caches.keys()){if(key.startsWith('vydoh-v')&&key!==CACHE)await caches.delete(key)}await self.clients.claim()})())});
-self.addEventListener('fetch',event=>{const req=event.request;if(req.method!=='GET'||req.mode==='navigate'&&new URL(req.url).origin!==self.location.origin)return;const url=new URL(req.url);if(url.origin!==self.location.origin)return;event.respondWith((async()=>{const cache=await caches.open(CACHE);if(req.mode==='navigate'){try{const response=await fetch(req);if(response.ok)await cache.put('./index.html',response.clone());return response}catch{return await cache.match('./index.html')||Response.error()}}const cached=await cache.match(req);if(cached)return cached;try{const response=await fetch(req);if(response.ok&&response.type==='basic')await cache.put(req,response.clone());return response}catch{return Response.error()}})())});
+self.addEventListener('fetch',event=>{
+ const req=event.request;if(req.method!=='GET')return;
+ const url=new URL(req.url);if(url.origin!==self.location.origin)return;
+ event.respondWith((async()=>{
+  const cache=await caches.open(CACHE);
+  if(req.mode==='navigate'){
+   try{const response=await fetch(req);if(response.ok)await cache.put('./index.html',response.clone());return response}
+   catch{return await cache.match('./index.html')||Response.error()}
+  }
+  const cached=await cache.match(req);if(cached)return cached;
+  try{const response=await fetch(req);if(response.ok&&response.type==='basic')await cache.put(req,response.clone());return response}
+  catch{return Response.error()}
+ })());
+});
